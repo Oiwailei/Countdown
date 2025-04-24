@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>倒计时</title>
+    <style>
+      html {
+        height: 100%;
+      }
+      body {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #eee;
+      }
+      .flip-clock {
+        text-align: center;
+        perspective: 400px;
+        margin: 20px auto;
+      }
+      .flip-clock *,
+      .flip-clock *:before,
+      .flip-clock *:after {
+        box-sizing: border-box;
+      }
+      .flip-clock__piece {
+        display: inline-block;
+        margin: 0 5px;
+      }
+      .flip-clock__slot {
+        font-size: 2vw;
+      }
+      .card {
+        display: block;
+        position: relative;
+        padding-bottom: 0.72em;
+        font-size: 9vw;
+        line-height: 0.95;
+      }
+      .card__top,
+      .card__bottom,
+      .card__back::before,
+      .card__back::after {
+        display: block;
+        height: 0.72em;
+        color: #ccc;
+        background: #222;
+        padding: 0.25em 0.25em;
+        border-radius: 0.15em 0.15em 0 0;
+        backface-visibility: hidden;
+        transform-style: preserve-3d;
+        width: 1.8em;
+        transform: translateZ(0);
+      }
+      .card__bottom {
+        color: #fff;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        border-top: solid 1px #000;
+        background: #393939;
+        border-radius: 0 0 0.15em 0.15em;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .card__bottom::after {
+        display: block;
+        margin-top: -0.72em;
+      }
+      .card__back::before,
+      .card__bottom::after {
+        content: attr(data-value);
+      }
+      .card__back {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        left: 0%;
+        pointer-events: none;
+      }
+      .card__back::before {
+        position: relative;
+        z-index: -1;
+        overflow: hidden;
+      }
+      .flip .card__back::before {
+        -webkit-animation: flipTop 0.3s cubic-bezier(0.37, 0.01, 0.94, 0.35);
+        animation: flipTop 0.3s cubic-bezier(0.37, 0.01, 0.94, 0.35);
+        -webkit-animation-fill-mode: both;
+        animation-fill-mode: both;
+        transform-origin: center bottom;
+      }
+      .flip .card__back .card__bottom {
+        transform-origin: center top;
+        -webkit-animation-fill-mode: both;
+        animation-fill-mode: both;
+        -webkit-animation: flipBottom 0.6s cubic-bezier(0.15, 0.45, 0.28, 1);
+        animation: flipBottom 0.6s cubic-bezier(0.15, 0.45, 0.28, 1);
+      }
+      @-webkit-keyframes flipTop {
+        0% {
+          transform: rotateX(0deg);
+          z-index: 2;
+        }
+        0%,
+        99% {
+          opacity: 0.99;
+        }
+        100% {
+          transform: rotateX(-90deg);
+          opacity: 0;
+        }
+      }
+      @keyframes flipTop {
+        0% {
+          transform: rotateX(0deg);
+          z-index: 2;
+        }
+        0%,
+        99% {
+          opacity: 0.99;
+        }
+        100% {
+          transform: rotateX(-90deg);
+          opacity: 0;
+        }
+      }
+      @-webkit-keyframes flipBottom {
+        0%,
+        50% {
+          z-index: -1;
+          transform: rotateX(90deg);
+          opacity: 0;
+        }
+        51% {
+          opacity: 0.99;
+        }
+        100% {
+          opacity: 0.99;
+          transform: rotateX(0deg);
+          z-index: 5;
+        }
+      }
+      @keyframes flipBottom {
+        0%,
+        50% {
+          z-index: -1;
+          transform: rotateX(90deg);
+          opacity: 0;
+        }
+        51% {
+          opacity: 0.99;
+        }
+        100% {
+          opacity: 0.99;
+          transform: rotateX(0deg);
+          z-index: 5;
+        }
+      }
+
+      .settings-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        font-size: 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 10px;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+      }
+
+      .settings-btn:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .modal-content h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+
+      .modal-content input {
+        display: block;
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .modal-content button {
+        padding: 8px 15px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      #saveDate {
+        background-color: #29bf2e;
+        color: white;
+        border-radius: 24px;
+      }
+
+      #closeModal {
+        background-color: #e95146;
+        color: white;
+        border-radius: 24px;
+      }
+
+      #saveDate:hover,
+      #closeModal:hover {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="settingsBtn" class="settings-btn">⚙️</button>
+
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <h2>设置目标日期</h2>
+        <input type="datetime-local" id="targetDate" />
+        <button id="saveDate">保存</button>
+        <button id="closeModal">取消</button>
+      </div>
+    </div>
+
+    <div id="clockContainer"></div>
+
+    <script>
+      console.clear();
+
+      function CountdownTracker(label, value) {
+        var el = document.createElement("span");
+
+        el.className = "flip-clock__piece";
+        el.innerHTML =
+          '<b class="flip-clock__card card"><b class="card__top"></b><b class="card__bottom"></b><b class="card__back"><b class="card__bottom"></b></b></b>' +
+          '<span class="flip-clock__slot">' +
+          label +
+          "</span>";
+
+        this.el = el;
+
+        var top = el.querySelector(".card__top"),
+          bottom = el.querySelector(".card__bottom"),
+          back = el.querySelector(".card__back"),
+          backBottom = el.querySelector(".card__back .card__bottom");
+
+        this.update = function (val) {
+          val = ("0" + val).slice(-2);
+          if (val !== this.currentValue) {
+            if (this.currentValue >= 0) {
+              back.setAttribute("data-value", this.currentValue);
+              bottom.setAttribute("data-value", this.currentValue);
+            }
+            this.currentValue = val;
+            top.innerText = this.currentValue;
+            backBottom.setAttribute("data-value", this.currentValue);
+
+            this.el.classList.remove("flip");
+            void this.el.offsetWidth;
+            this.el.classList.add("flip");
+          }
+        };
+
+        this.update(value);
+      }
+
+      // Calculation adapted from https://www.sitepoint.com/build-javascript-countdown-timer-no-dependencies/
+
+      function getTimeRemaining(endtime) {
+        var t = Date.parse(endtime) - Date.parse(new Date());
+        return {
+          Total: t,
+          Days: Math.floor(t / (1000 * 60 * 60 * 24)),
+          Hours: Math.floor((t / (1000 * 60 * 60)) % 24),
+          Minutes: Math.floor((t / 1000 / 60) % 60),
+          Seconds: Math.floor((t / 1000) % 60),
+        };
+      }
+
+      function getTime() {
+        var t = new Date();
+        return {
+          Total: t,
+          Hours: t.getHours() % 12,
+          Minutes: t.getMinutes(),
+          Seconds: t.getSeconds(),
+        };
+      }
+
+      function Clock(countdown, callback) {
+        countdown = countdown ? new Date(Date.parse(countdown)) : false;
+        callback = callback || function () {};
+
+        var updateFn = countdown ? getTimeRemaining : getTime;
+
+        this.el = document.createElement("div");
+        this.el.className = "flip-clock";
+
+        var trackers = {},
+          t = updateFn(countdown),
+          key,
+          timeinterval;
+
+        for (key in t) {
+          if (key === "Total") {
+            continue;
+          }
+          trackers[key] = new CountdownTracker(key, t[key]);
+          this.el.appendChild(trackers[key].el);
+        }
+
+        var i = 0;
+        function updateClock() {
+          timeinterval = requestAnimationFrame(updateClock);
+
+          // throttle so it's not constantly updating the time.
+          if (i++ % 10) {
+            return;
+          }
+
+          var t = updateFn(countdown);
+          if (t.Total < 0) {
+            cancelAnimationFrame(timeinterval);
+            for (key in trackers) {
+              trackers[key].update(0);
+            }
+            callback();
+            return;
+          }
+
+          for (key in trackers) {
+            trackers[key].update(t[key]);
+          }
+        }
+
+        setTimeout(updateClock, 500);
+      }
+
+      // Initialize the clock with default deadline
+      var deadline = new Date(Date.parse(new Date()));
+      var clockContainer = document.getElementById("clockContainer");
+      var c = new Clock(deadline, function () {
+        alert("倒计时结束！");
+      });
+      clockContainer.appendChild(c.el);
+
+      // Settings modal functionality
+      const settingsBtn = document.getElementById("settingsBtn");
+      const settingsModal = document.getElementById("settingsModal");
+      const closeModal = document.getElementById("closeModal");
+      const saveDate = document.getElementById("saveDate");
+      const targetDate = document.getElementById("targetDate");
+
+      // Set initial value of datetime-local input using local time
+      const formatDateForInput = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
+      targetDate.value = formatDateForInput(deadline);
+
+      settingsBtn.addEventListener("click", () => {
+        settingsModal.style.display = "block";
+      });
+
+      closeModal.addEventListener("click", () => {
+        settingsModal.style.display = "none";
+      });
+
+      saveDate.addEventListener("click", () => {
+        const newDeadline = new Date(targetDate.value);
+        if (newDeadline > new Date()) {
+          // Remove old clock
+          while (clockContainer.firstChild) {
+            clockContainer.removeChild(clockContainer.firstChild);
+          }
+
+          // Create new clock with new deadline
+          c = new Clock(newDeadline, function () {
+            alert("倒计时结束！");
+          });
+          clockContainer.appendChild(c.el);
+
+          settingsModal.style.display = "none";
+        } else {
+          alert("请选择一个未来的日期！");
+        }
+      });
+
+      // var clock = new Clock();
+      // document.body.appendChild(clock.el);
+    </script>
+  </body>
+</html>
